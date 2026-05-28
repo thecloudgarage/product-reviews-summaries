@@ -1,0 +1,52 @@
+apiVersion: platform.confluent.io/v1beta1
+kind: Connect
+metadata:
+  name: kafka-connect
+  namespace: confluent
+  annotations:
+    # Reference the overlay ConfigMap
+    platform.confluent.io/pod-overlay-configmap-name: connect-pod-overlay
+spec:
+  replicas: 1
+  image:
+    application: confluentinc/cp-server-connect:8.2.0
+    init: confluentinc/confluent-init-container:3.2.0
+
+  # Fetches the elasticsearch plugin dynamically on boot
+  build:
+    type: onDemand
+    onDemand:
+      plugins:
+        confluentHub:
+          - name: kafka-connect-elasticsearch
+            owner: confluentinc
+            version: 15.1.1
+          # ADDED: MongoDB Connector
+          - name: kafka-connect-mongodb
+            owner: mongodb
+            version: 1.13.0
+
+  # EXPOSE VIA EXTERNAL LOADBALANCER
+  externalAccess:
+    type: loadBalancer
+    loadBalancer:
+      domain: example.com       # Your domain name
+#      prefix: kafkaconnect      # Exposes endpoint at: ://example.com
+
+  dependencies:
+    kafka:
+      bootstrapEndpoint: kafka.confluent.svc.cluster.local:9092
+  podTemplate:
+    # CFK v1beta1 correct field for probes
+    probe:
+      readiness:
+        initialDelaySeconds: 180
+        periodSeconds: 20
+    # CFK v1beta1 correct field for resources
+    resources:
+      requests:
+        cpu: "1"
+        memory: "4Gi"
+      limits:
+        cpu: "2"
+        memory: "4Gi"
