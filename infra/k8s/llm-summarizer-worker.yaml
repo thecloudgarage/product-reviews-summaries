@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-summarizer-worker
+  namespace: apps
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: llm-summarizer-worker
+  template:
+    metadata:
+      labels:
+        app: llm-summarizer-worker
+    spec:
+      containers:
+        - name: llm-summarizer-worker
+          image: llm_summarizer_worker:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: product-platform-config
