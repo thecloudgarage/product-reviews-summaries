@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: product-seeder
+  namespace: apps
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: product-seeder
+          image: product_seeder:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: product-platform-config
