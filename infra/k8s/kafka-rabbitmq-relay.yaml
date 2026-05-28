@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-rabbitmq-relay
+  namespace: apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-rabbitmq-relay
+  template:
+    metadata:
+      labels:
+        app: kafka-rabbitmq-relay
+    spec:
+      containers:
+        - name: kafka-rabbitmq-relay
+          image: kafka_rabbitmq_relay:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: product-platform-config
