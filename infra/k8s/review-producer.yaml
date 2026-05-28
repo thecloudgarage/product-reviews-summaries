@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: review-producer
+  namespace: apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: review-producer
+  template:
+    metadata:
+      labels:
+        app: review-producer
+    spec:
+      containers:
+        - name: review-producer
+          image: review_producer:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: product-platform-config
