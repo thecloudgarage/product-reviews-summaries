@@ -1,0 +1,178 @@
+apiVersion: platform.confluent.io/v1beta1
+kind: KRaftController
+metadata:
+  name: kraftcontroller
+  namespace: confluent
+spec:
+  replicas: 3
+  image:
+    application: confluentinc/cp-server:8.2.0
+    init: confluentinc/confluent-init-container:3.2.0
+  dataVolumeCapacity: 2Gi
+  storageClass:
+    name: longhorn
+  podTemplate:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "1"
+        memory: "2Gi"
+
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: Kafka
+metadata:
+  name: kafka
+  namespace: confluent
+spec:
+  replicas: 3
+  image:
+    application: confluentinc/cp-server:8.2.0
+    init: confluentinc/confluent-init-container:3.2.0
+  dependencies:
+    kRaftController:
+      clusterRef:
+        name: kraftcontroller
+        namespace: confluent
+  dataVolumeCapacity: 1Gi
+  storageClass:
+    name: longhorn
+  podTemplate:
+    resources:
+      requests:
+        cpu: "1"
+        memory: "1Gi"
+      limits:
+        cpu: "2"
+        memory: "2Gi"
+  configOverrides:
+    server:
+      - offsets.topic.replication.factor=3
+      - transaction.state.log.replication.factor=3
+      - transaction.state.log.min.isr=2
+      - default.replication.factor=3
+      - min.insync.replicas=2
+      - auto.create.topics.enable=false
+
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: SchemaRegistry
+metadata:
+  name: schemaregistry
+  namespace: confluent
+spec:
+  replicas: 2
+  image:
+    application: confluentinc/cp-schema-registry:8.2.0
+    init: confluentinc/confluent-init-container:3.2.0
+  dependencies:
+    kafka:
+      bootstrapEndpoint: kafka.confluent.svc.cluster.local:9071
+  podTemplate:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+      limits:
+        cpu: "1"
+        memory: "1Gi"
+
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: KafkaRestProxy
+metadata:
+  name: kafkarestproxy
+  namespace: confluent
+spec:
+  replicas: 2
+  image:
+    application: confluentinc/cp-kafka-rest:8.2.0
+    init: confluentinc/confluent-init-container:3.2.0
+  dependencies:
+    kafka:
+      bootstrapEndpoint: kafka.confluent.svc.cluster.local:9092
+  podTemplate:
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: KsqlDB
+metadata:
+  name: ksqldb
+  namespace: confluent
+spec:
+  replicas: 2
+  image:
+    application: confluentinc/cp-ksqldb-server:8.2.0
+    init: confluentinc/confluent-init-container:3.2.0
+  dataVolumeCapacity: 1Gi
+  storageClass:
+    name: longhorn
+  dependencies:
+    kafka:
+      bootstrapEndpoint: kafka.confluent.svc.cluster.local:9092
+  podTemplate:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+      limits:
+        cpu: "1"
+        memory: "1Gi"
+  configOverrides:
+    server:
+      - ksql.streams.replication.factor=3
+      - ksql.sink.replicas=3
+      - ksql.internal.topic.replicas=3
+
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: ControlCenter
+metadata:
+  name: controlcenter
+  namespace: confluent
+spec:
+  replicas: 1
+  image:
+    application: confluentinc/cp-enterprise-control-center-next-gen:latest
+    init: confluentinc/confluent-init-container:3.2.0
+  dataVolumeCapacity: 1Gi
+  storageClass:
+    name: longhorn
+  dependencies:
+    kafka:
+      bootstrapEndpoint: kafka.confluent.svc.cluster.local:9092
+    schemaRegistry:
+      url: http://cluster.local
+    connect:
+      - name: connect-cluster
+        url: http://cluster.local
+    ksqldb:
+      - name: ksqldb-cluster
+        url: http://cluster.local
+  externalAccess:
+    type: loadBalancer
+    loadBalancer:
+      domain: example.com
+  configOverrides:
+    server:
+      # These prevent the "waiting for streams to be in running state" loop
+      - confluent.controlcenter.streams.max.poll.interval.ms=600000
+      - confluent.controlcenter.streams.session.timeout.ms=60000
+  podTemplate:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "1"
+        # 2Gi is the recommended minimum when connecting multiple dependencies
+        memory: "2Gi"
