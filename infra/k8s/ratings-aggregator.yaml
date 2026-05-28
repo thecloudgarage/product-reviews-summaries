@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ratings-aggregator
+  namespace: apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ratings-aggregator
+  template:
+    metadata:
+      labels:
+        app: ratings-aggregator
+    spec:
+      containers:
+        - name: ratings-aggregator
+          image: ratings_aggregator:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: product-platform-config
