@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: review-batch-aggregator
+  namespace: apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: review-batch-aggregator
+  template:
+    metadata:
+      labels:
+        app: review-batch-aggregator
+    spec:
+      containers:
+        - name: review-batch-aggregator
+          image: review_batch_aggregator:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: product-platform-config
