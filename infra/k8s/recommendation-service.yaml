@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: recommendation-service
-          image: recommendation_service:latest
+          image: thecloudgarage/recommendation_service:latest
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
