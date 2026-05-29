@@ -6,6 +6,7 @@ import random
 import string
 from datetime import datetime, timezone
 from typing import Any, Dict, List
+from urllib.parse import quote
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
@@ -33,6 +34,41 @@ def to_json_bytes(value: Dict[str, Any]) -> bytes:
 
 def from_json_bytes(value: bytes) -> Dict[str, Any]:
     return json.loads(value.decode("utf-8"))
+
+def build_elasticsearch_client():
+    from elasticsearch import Elasticsearch
+
+    es_url = env("ELASTICSEARCH_URL", required=True)
+    es_username = env("ELASTICSEARCH_USERNAME")
+    es_password = env("ELASTICSEARCH_PASSWORD")
+
+    if es_username and es_password:
+        return Elasticsearch(es_url, basic_auth=(es_username, es_password))
+
+    return Elasticsearch(es_url)
+
+def build_redis_url() -> str:
+    redis_url = env("REDIS_URL")
+    if redis_url:
+        return redis_url
+
+    redis_host = env("REDIS_HOST", "redis.messaging.svc.cluster.local")
+    redis_port = env("REDIS_PORT", "6379")
+    redis_db = env("REDIS_DB", "0")
+    redis_username = env("REDIS_USERNAME")
+    redis_password = env("REDIS_PASSWORD")
+
+    if redis_username and redis_password:
+        return f"redis://{quote(redis_username)}:{quote(redis_password)}@{redis_host}:{redis_port}/{redis_db}"
+
+    if redis_password:
+        return f"redis://:{quote(redis_password)}@{redis_host}:{redis_port}/{redis_db}"
+
+    return f"redis://{redis_host}:{redis_port}/{redis_db}"
+
+def build_redis_client(decode_responses: bool = True):
+    import redis
+    return redis.from_url(build_redis_url(), decode_responses=decode_responses)
 
 CATEGORIES: List[str] = [
     "Laptops",
