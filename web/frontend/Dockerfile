@@ -2,12 +2,14 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-COPY web/frontend/package.json /app/package.json
-COPY web/frontend/vite.config.js /app/vite.config.js
-COPY web/frontend/index.html /app/index.html
-COPY web/frontend/src /app/src
+COPY web/frontend/package*.json ./
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
-RUN npm install
+COPY web/frontend/index.html ./index.html
+COPY web/frontend/vite.config.js ./vite.config.js
+COPY web/frontend/src ./src
+
+ENV CI=true
 RUN npm run build
 
 FROM nginx:1.27-alpine
