@@ -1,0 +1,24 @@
+0.825 x Build failed in 64ms
+0.826 error during build:
+0.826 [vite]: Rollup failed to resolve import "/src/main.jsx" from "/app/index.html".
+0.826 This is most likely unintended because it can break your application at runtime.
+0.826 If you do want to externalize this module explicitly add it to
+0.826 `build.rollupOptions.external`
+0.826     at viteWarn (file:///app/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65855:17)
+0.826     at onRollupWarning (file:///app/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65887:5)
+0.826     at onwarn (file:///app/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65550:7)
+0.826     at file:///app/node_modules/rollup/dist/es/shared/node-entry.js:21404:13
+0.826     at Object.logger [as onLog] (file:///app/node_modules/rollup/dist/es/shared/node-entry.js:23385:9)
+0.826     at ModuleLoader.handleInvalidResolvedId (file:///app/node_modules/rollup/dist/es/shared/node-entry.js:22129:26)
+0.826     at file:///app/node_modules/rollup/dist/es/shared/node-entry.js:22087:26
+------
+Dockerfile:13
+--------------------
+  11 |
+  12 |     ENV CI=true
+  13 | >>> RUN npm run build
+  14 |
+  15 |     FROM nginx:1.27-alpine
+--------------------
+ERROR: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
+make: *** [Makefile:10: build] Error 1
