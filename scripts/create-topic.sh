@@ -18,3 +18,4 @@ kafka-topics --bootstrap-server ${BOOTSTRAP} --create --if-not-exists --topic pr
 kafka-topics --bootstrap-server ${BOOTSTRAP} --create --if-not-exists --topic product-review-batches --partitions 6 --replication-factor 3
 kafka-topics --bootstrap-server ${BOOTSTRAP} --create --if-not-exists --topic product-review-dlq --partitions 3 --replication-factor 3
 kafka-topics --bootstrap-server ${BOOTSTRAP} --create --if-not-exists --topic product-review-batches-dlq --partitions 3 --replication-factor 3
+"
