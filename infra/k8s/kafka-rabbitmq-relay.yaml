@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: kafka-rabbitmq-relay
-          image: kafka_rabbitmq_relay:latest
+          image: thecloudgarage/kafka_rabbitmq_relay:latest
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
