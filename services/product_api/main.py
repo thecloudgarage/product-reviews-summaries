@@ -1,13 +1,11 @@
 import json
 from fastapi import FastAPI, HTTPException
-from elasticsearch import Elasticsearch
-import redis
-from common.utils import env
+from common.utils import build_elasticsearch_client, build_redis_client, env
 
 app = FastAPI(title="product-api")
 
-ES = Elasticsearch(env("ELASTICSEARCH_URL", required=True))
-REDIS = redis.from_url(env("REDIS_URL", required=True), decode_responses=True)
+ES = build_elasticsearch_client()
+REDIS = build_redis_client(decode_responses=True)
 PRODUCTS_INDEX = env("PRODUCTS_INDEX", "products")
 REVIEWS_INDEX = env("REVIEWS_INDEX", "product_reviews")
 
