@@ -6,11 +6,18 @@ metadata:
 data:
   KAFKA_BOOTSTRAP_SERVERS: kafka.confluent.svc.cluster.local:9092
   ELASTICSEARCH_URL: http://single-es-coord.elasticsearch.svc.cluster.local:9200
-  REDIS_URL: redis://redis.messaging.svc.cluster.local:6379/0
+  ELASTICSEARCH_USERNAME: your-es-username
+  ELASTICSEARCH_PASSWORD: your-es-password
+  REDIS_URL: ""
+  REDIS_HOST: redis.messaging.svc.cluster.local
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_USERNAME: your-redis-username
+  REDIS_PASSWORD: your-redis-password
   RABBITMQ_HOST: rabbitmq.messaging.svc.cluster.local
   RABBITMQ_PORT: "5672"
-  RABBITMQ_USER: guest
-  RABBITMQ_PASSWORD: guest
+  RABBITMQ_USER: your-rabbitmq-username
+  RABBITMQ_PASSWORD: your-rabbitmq-password
   PRODUCTS_INDEX: products
   REVIEWS_INDEX: product_reviews
   TOPIC_PRODUCT_REVIEWS: product-reviews
@@ -22,6 +29,6 @@ data:
   PRODUCE_INTERVAL_SECONDS: "1"
   WINDOW_SECONDS: "60"
   MAX_BATCH_SIZE: "20"
-  USE_FAKE_LLM: "false"
-  OPENAI_API_KEY: "your-openai-api-key"
-  OPENAI_MODEL: "gpt-4o-mini"
+  USE_FAKE_LLM: "true"
+  OPENAI_API_KEY: your-openai-api-key
+  OPENAI_MODEL: gpt-4o-mini
