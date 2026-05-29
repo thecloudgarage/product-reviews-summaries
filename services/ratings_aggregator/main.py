@@ -1,19 +1,17 @@
 import time
 from collections import defaultdict
 from kafka import KafkaConsumer
-from elasticsearch import Elasticsearch
-from common.utils import env, from_json_bytes, logger, now_iso
+from common.utils import build_elasticsearch_client, env, from_json_bytes, logger, now_iso
 
 log = logger("ratings_aggregator")
 
 BOOTSTRAP = env("KAFKA_BOOTSTRAP_SERVERS", required=True)
 TOPIC = env("TOPIC_PRODUCT_REVIEWS", "product-reviews")
 GROUP_ID = env("GROUP_ID", "ratings-aggregator")
-ES_URL = env("ELASTICSEARCH_URL", required=True)
 PRODUCTS_INDEX = env("PRODUCTS_INDEX", "products")
 WINDOW_SECONDS = int(env("WINDOW_SECONDS", "60"))
 
-def flush_batch(es: Elasticsearch, batch):
+def flush_batch(es, batch):
     for product_id, stats in batch.items():
         es.update(
             index=PRODUCTS_INDEX,
@@ -45,7 +43,7 @@ def flush_batch(es: Elasticsearch, batch):
     log.info("Flushed %s product aggregates", len(batch))
 
 def main():
-    es = Elasticsearch(ES_URL)
+    es = build_elasticsearch_client()
     consumer = KafkaConsumer(
         TOPIC,
         bootstrap_servers=BOOTSTRAP,
