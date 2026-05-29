@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: review-batch-aggregator
-          image: review_batch_aggregator:latest
+          image: thecloudgarage/review_batch_aggregator:latest
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
