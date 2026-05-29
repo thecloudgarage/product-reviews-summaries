@@ -1,16 +1,22 @@
-0.825 x Build failed in 64ms
-0.826 error during build:
-0.826 [vite]: Rollup failed to resolve import "/src/main.jsx" from "/app/index.html".
-0.826 This is most likely unintended because it can break your application at runtime.
-0.826 If you do want to externalize this module explicitly add it to
-0.826 `build.rollupOptions.external`
-0.826     at viteWarn (file:///app/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65855:17)
-0.826     at onRollupWarning (file:///app/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65887:5)
-0.826     at onwarn (file:///app/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65550:7)
-0.826     at file:///app/node_modules/rollup/dist/es/shared/node-entry.js:21404:13
-0.826     at Object.logger [as onLog] (file:///app/node_modules/rollup/dist/es/shared/node-entry.js:23385:9)
-0.826     at ModuleLoader.handleInvalidResolvedId (file:///app/node_modules/rollup/dist/es/shared/node-entry.js:22129:26)
-0.826     at file:///app/node_modules/rollup/dist/es/shared/node-entry.js:22087:26
+ => ERROR [build 8/8] RUN npm run build                                                                                                                                              1.3s
+------
+ > [build 8/8] RUN npm run build:
+0.659
+0.659 > product-frontend@1.0.0 build
+0.659 > vite build
+0.659
+1.019 The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+1.061 vite v5.4.21 building for production...
+1.154 transforming...
+1.185 â 2 modules transformed.
+1.189 x Build failed in 84ms
+1.189 error during build:
+1.189 Could not resolve "./src/main.jsx" from "index.html"
+1.189 file: /app/index.html
+1.189     at getRollupError (file:///app/node_modules/rollup/dist/es/shared/parseAst.js:406:41)
+1.189     at error (file:///app/node_modules/rollup/dist/es/shared/parseAst.js:402:42)
+1.189     at ModuleLoader.handleInvalidResolvedId (file:///app/node_modules/rollup/dist/es/shared/node-entry.js:22127:24)
+1.189     at file:///app/node_modules/rollup/dist/es/shared/node-entry.js:22087:26
 ------
 Dockerfile:13
 --------------------
