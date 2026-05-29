@@ -11,6 +11,8 @@ spec:
   configs:
     topics: "product-reviews"
     connection.url: "http://single-es-coord.elasticsearch.svc.cluster.local:9200"
+    connection.username: "your-es-username"
+    connection.password: "your-es-password"
 
     transforms: "CreateKey,ExtractKey"
     transforms.CreateKey.type: "org.apache.kafka.connect.transforms.ValueToKey"
