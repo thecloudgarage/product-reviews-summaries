@@ -5,9 +5,9 @@ metadata:
   namespace: messaging
 data:
   REDIS_USERNAME: default
-  REDIS_PASSWORD: your-redis-password
-  RABBITMQ_DEFAULT_USER: your-rabbitmq-username
-  RABBITMQ_DEFAULT_PASS: your-rabbitmq-password
+  REDIS_PASSWORD: pass123
+  RABBITMQ_DEFAULT_USER: default
+  RABBITMQ_DEFAULT_PASS: pass123
 ---
 apiVersion: apps/v1
 kind: Deployment
