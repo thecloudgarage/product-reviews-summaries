@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: review-producer
-          image: review_producer:latest
+          image: thecloudgarage/review_producer:latest
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
