@@ -89,12 +89,22 @@ kubectl apply -f infra/k8s/ingress.yaml
 
 ```env
 KAFKA_BOOTSTRAP_SERVERS=kafka.confluent.svc.cluster.local:9092
+
 ELASTICSEARCH_URL=http://single-es-coord.elasticsearch.svc.cluster.local:9200
-REDIS_URL=redis://redis.messaging.svc.cluster.local:6379/0
+ELASTICSEARCH_USERNAME=your-es-username
+ELASTICSEARCH_PASSWORD=your-es-password
+
+REDIS_URL=
+REDIS_HOST=redis.messaging.svc.cluster.local
+REDIS_PORT=6379
+REDIS_DB=0
+REDIS_USERNAME=your-redis-username
+REDIS_PASSWORD=your-redis-password
+
 RABBITMQ_HOST=rabbitmq.messaging.svc.cluster.local
 RABBITMQ_PORT=5672
-RABBITMQ_USER=guest
-RABBITMQ_PASSWORD=guest
+RABBITMQ_USER=your-rabbitmq-username
+RABBITMQ_PASSWORD=your-rabbitmq-password
 
 PRODUCTS_INDEX=products
 REVIEWS_INDEX=product_reviews
@@ -114,7 +124,7 @@ MAX_BATCH_SIZE=20
 API_PORT=8080
 
 USE_FAKE_LLM=true
-OPENAI_API_KEY=
+OPENAI_API_KEY=your-openai-api-key
 OPENAI_MODEL=gpt-4o-mini
 ```
 
@@ -190,6 +200,7 @@ import random
 import string
 from datetime import datetime, timezone
 from typing import Any, Dict, List
+from urllib.parse import quote
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
@@ -217,6 +228,41 @@ def to_json_bytes(value: Dict[str, Any]) -> bytes:
 
 def from_json_bytes(value: bytes) -> Dict[str, Any]:
     return json.loads(value.decode("utf-8"))
+
+def build_elasticsearch_client():
+    from elasticsearch import Elasticsearch
+
+    es_url = env("ELASTICSEARCH_URL", required=True)
+    es_username = env("ELASTICSEARCH_USERNAME")
+    es_password = env("ELASTICSEARCH_PASSWORD")
+
+    if es_username and es_password:
+        return Elasticsearch(es_url, basic_auth=(es_username, es_password))
+
+    return Elasticsearch(es_url)
+
+def build_redis_url() -> str:
+    redis_url = env("REDIS_URL")
+    if redis_url:
+        return redis_url
+
+    redis_host = env("REDIS_HOST", "redis.messaging.svc.cluster.local")
+    redis_port = env("REDIS_PORT", "6379")
+    redis_db = env("REDIS_DB", "0")
+    redis_username = env("REDIS_USERNAME")
+    redis_password = env("REDIS_PASSWORD")
+
+    if redis_username and redis_password:
+        return f"redis://{quote(redis_username)}:{quote(redis_password)}@{redis_host}:{redis_port}/{redis_db}"
+
+    if redis_password:
+        return f"redis://:{quote(redis_password)}@{redis_host}:{redis_port}/{redis_db}"
+
+    return f"redis://{redis_host}:{redis_port}/{redis_db}"
+
+def build_redis_client(decode_responses: bool = True):
+    import redis
+    return redis.from_url(build_redis_url(), decode_responses=decode_responses)
 
 CATEGORIES: List[str] = [
     "Laptops",
@@ -312,16 +358,15 @@ CMD ["python", "main.py"]
 ## `services/product_seeder/main.py`
 
 ```python
-from elasticsearch import Elasticsearch, helpers
-from common.utils import env, fake_product, logger
+from elasticsearch import helpers
+from common.utils import build_elasticsearch_client, env, fake_product, logger
 
 log = logger("product_seeder")
 
-ES_URL = env("ELASTICSEARCH_URL", required=True)
 PRODUCTS_INDEX = env("PRODUCTS_INDEX", "products")
 COUNT = int(env("PRODUCT_COUNT", "500"))
 
-def ensure_products_index(es: Elasticsearch):
+def ensure_products_index(es):
     if es.indices.exists(index=PRODUCTS_INDEX):
         log.info("Index %s already exists", PRODUCTS_INDEX)
         return
@@ -346,7 +391,7 @@ def ensure_products_index(es: Elasticsearch):
     log.info("Created index %s", PRODUCTS_INDEX)
 
 def main():
-    es = Elasticsearch(ES_URL)
+    es = build_elasticsearch_client()
     ensure_products_index(es)
 
     actions = []
@@ -393,24 +438,22 @@ CMD ["python", "main.py"]
 ```python
 import random
 import time
-from elasticsearch import Elasticsearch
 from kafka import KafkaProducer
-from common.utils import env, fake_review, logger, to_json_bytes
+from common.utils import build_elasticsearch_client, env, fake_review, logger, to_json_bytes
 
 log = logger("review_producer")
 
-ES_URL = env("ELASTICSEARCH_URL", required=True)
 PRODUCTS_INDEX = env("PRODUCTS_INDEX", "products")
 BOOTSTRAP = env("KAFKA_BOOTSTRAP_SERVERS", required=True)
 TOPIC = env("TOPIC_PRODUCT_REVIEWS", "product-reviews")
 INTERVAL = float(env("PRODUCE_INTERVAL_SECONDS", "1"))
 
-def load_products(es: Elasticsearch):
+def load_products(es):
     res = es.search(index=PRODUCTS_INDEX, size=1000, query={"match_all": {}})
     return [hit["_source"] for hit in res["hits"]["hits"]]
 
 def main():
-    es = Elasticsearch(ES_URL)
+    es = build_elasticsearch_client()
     products = load_products(es)
     if not products:
         raise RuntimeError("No products found. Run product_seeder first.")
@@ -464,19 +507,17 @@ CMD ["python", "main.py"]
 import time
 from collections import defaultdict
 from kafka import KafkaConsumer
-from elasticsearch import Elasticsearch
-from common.utils import env, from_json_bytes, logger, now_iso
+from common.utils import build_elasticsearch_client, env, from_json_bytes, logger, now_iso
 
 log = logger("ratings_aggregator")
 
 BOOTSTRAP = env("KAFKA_BOOTSTRAP_SERVERS", required=True)
 TOPIC = env("TOPIC_PRODUCT_REVIEWS", "product-reviews")
 GROUP_ID = env("GROUP_ID", "ratings-aggregator")
-ES_URL = env("ELASTICSEARCH_URL", required=True)
 PRODUCTS_INDEX = env("PRODUCTS_INDEX", "products")
 WINDOW_SECONDS = int(env("WINDOW_SECONDS", "60"))
 
-def flush_batch(es: Elasticsearch, batch):
+def flush_batch(es, batch):
     for product_id, stats in batch.items():
         es.update(
             index=PRODUCTS_INDEX,
@@ -508,7 +549,7 @@ def flush_batch(es: Elasticsearch, batch):
     log.info("Flushed %s product aggregates", len(batch))
 
 def main():
-    es = Elasticsearch(ES_URL)
+    es = build_elasticsearch_client()
     consumer = KafkaConsumer(
         TOPIC,
         bootstrap_servers=BOOTSTRAP,
@@ -743,8 +784,7 @@ CMD ["python", "main.py"]
 ```python
 import json
 import pika
-import redis
-from common.utils import env, logger, now_iso
+from common.utils import build_redis_client, env, logger, now_iso
 
 log = logger("llm_summarizer_worker")
 
@@ -754,13 +794,11 @@ RABBITMQ_USER = env("RABBITMQ_USER", "guest")
 RABBITMQ_PASSWORD = env("RABBITMQ_PASSWORD", "guest")
 QUEUE = env("QUEUE_REVIEW_SUMMARIZATION", "review_summarization_jobs")
 
-REDIS_URL = env("REDIS_URL", required=True)
-
 USE_FAKE_LLM = env("USE_FAKE_LLM", "true").lower() == "true"
 OPENAI_API_KEY = env("OPENAI_API_KEY", "")
 OPENAI_MODEL = env("OPENAI_MODEL", "gpt-4o-mini")
 
-r = redis.from_url(REDIS_URL, decode_responses=True)
+r = build_redis_client(decode_responses=True)
 
 def summarize_fake(reviews):
     positives = [rv["review_text"] for rv in reviews if rv["rating"] >= 4][:3]
@@ -854,19 +892,16 @@ CMD ["python", "main.py"]
 ## `services/recommendation_service/main.py`
 
 ```python
-import json
-import redis
 from kafka import KafkaConsumer
-from common.utils import compute_score, env, from_json_bytes, logger
+from common.utils import build_redis_client, compute_score, env, from_json_bytes, logger
 
 log = logger("recommendation_service")
 
 BOOTSTRAP = env("KAFKA_BOOTSTRAP_SERVERS", required=True)
 TOPIC = env("TOPIC_PRODUCT_REVIEWS", "product-reviews")
 GROUP_ID = env("GROUP_ID", "recommendation-service")
-REDIS_URL = env("REDIS_URL", required=True)
 
-r = redis.from_url(REDIS_URL, decode_responses=True)
+r = build_redis_client(decode_responses=True)
 
 def trim_top3(zkey: str):
     card = r.zcard(zkey)
@@ -944,14 +979,12 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
 ```python
 import json
 from fastapi import FastAPI, HTTPException
-from elasticsearch import Elasticsearch
-import redis
-from common.utils import env
+from common.utils import build_elasticsearch_client, build_redis_client, env
 
 app = FastAPI(title="product-api")
 
-ES = Elasticsearch(env("ELASTICSEARCH_URL", required=True))
-REDIS = redis.from_url(env("REDIS_URL", required=True), decode_responses=True)
+ES = build_elasticsearch_client()
+REDIS = build_redis_client(decode_responses=True)
 PRODUCTS_INDEX = env("PRODUCTS_INDEX", "products")
 REVIEWS_INDEX = env("REVIEWS_INDEX", "product_reviews")
 
@@ -1313,6 +1346,8 @@ spec:
   configs:
     topics: "product-reviews"
     connection.url: "http://single-es-coord.elasticsearch.svc.cluster.local:9200"
+    connection.username: "your-es-username"
+    connection.password: "your-es-password"
 
     transforms: "CreateKey,ExtractKey"
     transforms.CreateKey.type: "org.apache.kafka.connect.transforms.ValueToKey"
@@ -1352,6 +1387,17 @@ metadata:
 ## `infra/k8s/messaging.yaml`
 
 ```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: messaging-config
+  namespace: messaging
+data:
+  REDIS_USERNAME: default
+  REDIS_PASSWORD: your-redis-password
+  RABBITMQ_DEFAULT_USER: your-rabbitmq-username
+  RABBITMQ_DEFAULT_PASS: your-rabbitmq-password
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1370,6 +1416,12 @@ spec:
       containers:
         - name: redis
           image: redis:7.2-alpine
+          envFrom:
+            - configMapRef:
+                name: messaging-config
+          command: ["/bin/sh", "-c"]
+          args:
+            - redis-server --appendonly yes --requirepass "$REDIS_PASSWORD"
           ports:
             - containerPort: 6379
 ---
@@ -1403,6 +1455,9 @@ spec:
       containers:
         - name: rabbitmq
           image: rabbitmq:3.13-management
+          envFrom:
+            - configMapRef:
+                name: messaging-config
           ports:
             - containerPort: 5672
             - containerPort: 15672
@@ -1435,11 +1490,18 @@ metadata:
 data:
   KAFKA_BOOTSTRAP_SERVERS: kafka.confluent.svc.cluster.local:9092
   ELASTICSEARCH_URL: http://single-es-coord.elasticsearch.svc.cluster.local:9200
-  REDIS_URL: redis://redis.messaging.svc.cluster.local:6379/0
+  ELASTICSEARCH_USERNAME: your-es-username
+  ELASTICSEARCH_PASSWORD: your-es-password
+  REDIS_URL: ""
+  REDIS_HOST: redis.messaging.svc.cluster.local
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_USERNAME: your-redis-username
+  REDIS_PASSWORD: your-redis-password
   RABBITMQ_HOST: rabbitmq.messaging.svc.cluster.local
   RABBITMQ_PORT: "5672"
-  RABBITMQ_USER: guest
-  RABBITMQ_PASSWORD: guest
+  RABBITMQ_USER: your-rabbitmq-username
+  RABBITMQ_PASSWORD: your-rabbitmq-password
   PRODUCTS_INDEX: products
   REVIEWS_INDEX: product_reviews
   TOPIC_PRODUCT_REVIEWS: product-reviews
@@ -1452,6 +1514,8 @@ data:
   WINDOW_SECONDS: "60"
   MAX_BATCH_SIZE: "20"
   USE_FAKE_LLM: "true"
+  OPENAI_API_KEY: your-openai-api-key
+  OPENAI_MODEL: gpt-4o-mini
 ```
 
 ## `infra/k8s/product-seeder-job.yaml`
