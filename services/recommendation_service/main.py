@@ -1,16 +1,13 @@
-import json
-import redis
 from kafka import KafkaConsumer
-from common.utils import compute_score, env, from_json_bytes, logger
+from common.utils import build_redis_client, compute_score, env, from_json_bytes, logger
 
 log = logger("recommendation_service")
 
 BOOTSTRAP = env("KAFKA_BOOTSTRAP_SERVERS", required=True)
 TOPIC = env("TOPIC_PRODUCT_REVIEWS", "product-reviews")
 GROUP_ID = env("GROUP_ID", "recommendation-service")
-REDIS_URL = env("REDIS_URL", required=True)
 
-r = redis.from_url(REDIS_URL, decode_responses=True)
+r = build_redis_client(decode_responses=True)
 
 def trim_top3(zkey: str):
     card = r.zcard(zkey)
