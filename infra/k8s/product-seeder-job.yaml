@@ -9,7 +9,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: product-seeder
-          image: product_seeder:latest
+          image: thecloudgarage/product_seeder:latest
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
