@@ -1,13 +1,12 @@
-from elasticsearch import Elasticsearch, helpers
-from common.utils import env, fake_product, logger
+from elasticsearch import helpers
+from common.utils import build_elasticsearch_client, env, fake_product, logger
 
 log = logger("product_seeder")
 
-ES_URL = env("ELASTICSEARCH_URL", required=True)
 PRODUCTS_INDEX = env("PRODUCTS_INDEX", "products")
 COUNT = int(env("PRODUCT_COUNT", "500"))
 
-def ensure_products_index(es: Elasticsearch):
+def ensure_products_index(es):
     if es.indices.exists(index=PRODUCTS_INDEX):
         log.info("Index %s already exists", PRODUCTS_INDEX)
         return
@@ -32,7 +31,7 @@ def ensure_products_index(es: Elasticsearch):
     log.info("Created index %s", PRODUCTS_INDEX)
 
 def main():
-    es = Elasticsearch(ES_URL)
+    es = build_elasticsearch_client()
     ensure_products_index(es)
 
     actions = []
