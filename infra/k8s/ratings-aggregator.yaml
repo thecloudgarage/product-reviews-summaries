@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: ratings-aggregator
-          image: ratings_aggregator:latest
+          image: thecloudgarage/ratings_aggregator:latest
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
