@@ -1359,7 +1359,7 @@ spec:
     schema.ignore: "true"
     write.method: "UPSERT"
     behavior.on.null.values: "IGNORE"
-    topic.index.map: "product-reviews:product_reviews"
+    #actually not required. ES will default to topic name as Index name topic.index.map: "product-reviews:product_reviews"
 
     key.converter: "org.apache.kafka.connect.storage.StringConverter"
     value.converter: "org.apache.kafka.connect.json.JsonConverter"
