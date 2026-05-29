@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: llm-summarizer-worker
-          image: llm_summarizer_worker:latest
+          image: thecloudgarage/llm_summarizer_worker:latest
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
